@@ -2,3 +2,4 @@
 .idea
 src/rag_cli_builder.egg-info
 build
+src/rag_builder/__pycache__

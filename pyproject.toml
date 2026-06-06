@@ -3,22 +3,32 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rag-cli-builder"
-version = "1.0.0"
-description = "Uma CLI para estruturar pipelines RAG"
+name = "rag_cli_builder"
+version = "0.1.0"
 authors = [
-  { name="Seu Nome", email="seu.email@ufms.br" },
+  { name="Jean Marcel Peres Martins", email="jean.martins@ufms.br" },
 ]
+description = "A CLI tool to scaffold a RAG pipeline for scientific papers."
 readme = "README.md"
 requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 dependencies = [
+    "arxiv",
     "rank_bm25",
     "scikit-learn",
     "sentence-transformers",
     "pandas",
     "numpy",
-    "jupyter"
 ]
+
+[project.urls]
+"Homepage" = "https://github.com/jean-marcel-p-martins/rag_cli_builder"
+"Bug Tracker" = "https://github.com/jean-marcel-p-martins/rag_cli_builder/issues"
 
 [project.scripts]
 rag-setup = "rag_builder.main:main"
+
