@@ -1,2 +1,4 @@
 .venv
 .idea
+src/rag_cli_builder.egg-info
+build
