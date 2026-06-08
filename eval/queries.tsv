@@ -1,0 +1,10 @@
+q1	structural pruning of attention heads in transformer models
+q2	LLM compression during fine-tuning open source models
+q3	MLP layer pruning for parameter efficiency
+q4	magnitude based pruning of large language models
+q5	parameter efficient fine-tuning with sparsity
+q6	survey of structural compression methods for LLMs
+q7	knowledge distillation after model pruning
+q8	dynamic sparsity patterns in fine-tuned transformers
+q9	attention head importance scoring for pruning
+q10	comparing quantization and structural pruning for LLMs
