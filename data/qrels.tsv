@@ -1,0 +1,8 @@
+# Formato TREC: qid iter docid rel
+# Relevância: 0 (Não Relevante), 1 (Relevante), 2 (Altamente Relevante)
+# Exemplos fictícios de anotação - Você deve substituir pelos IDs reais dos documentos!
+q1	0	doc_id_placeholder_1	2
+q1	0	doc_id_placeholder_2	1
+q1	0	doc_id_placeholder_3	0
+q2	0	doc_id_placeholder_4	2
+q3	0	doc_id_placeholder_5	1
