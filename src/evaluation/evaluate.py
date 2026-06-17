@@ -5,12 +5,13 @@ Script de avaliacao para o trabalho pratico de IA (FACOM/UFMS, 2026/1).
 
 Le um arquivo de qrels (relevance judgments) e um ou mais arquivos de run
 no formato TREC, e reporta P@k, R@k, MAP e nDCG@k para cada sistema.
+Inclui teste de significância estatística (Wilcoxon signed-rank test).
 
 Uso:
     python -m evaluation.evaluate [--qrels PATH] [--runs PATH [PATH ...]] [--k K]
 
 Dependencias:
-    pip install pandas numpy
+    pip install pandas numpy scipy
 
 Observacao: Este script tem implementacoes simples das metricas para fins
 didaticos. Em producao/pesquisa, prefira `pytrec_eval` ou `ir_measures`.
@@ -24,6 +25,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import pandas as pd
+from scipy.stats import wilcoxon
 
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
@@ -116,11 +118,64 @@ def ndcg_at_k(ranked_docs, qrels_q, k):
 
 
 # ---------------------------------------------------------------------------
-# Avaliacao
+# Avaliacao e Teste Estatístico
 # ---------------------------------------------------------------------------
+
+def run_statistical_test(all_dfs, metric='nDCG@10'):
+    """
+    Compara o melhor sistema com os outros usando teste de Wilcoxon.
+    """
+    if len(all_dfs) < 2:
+        return
+
+    # Ordena os sistemas pela média da métrica principal
+    all_dfs.sort(key=lambda item: item['df'][metric].mean(), reverse=True)
+    
+    best_system_name = all_dfs[0]['name']
+    best_scores_df = all_dfs[0]['df'][['qid', metric]]
+    
+    print("\n=== Testes de Significância Estatística (Wilcoxon) ===")
+    print(f"Comparando o melhor sistema ({best_system_name}) com os demais.")
+    print(f"Métrica usada: {metric} por query.")
+    print("Hipótese Nula (H₀): Não há diferença real de performance entre os sistemas.")
+    print("p-valor < 0.05 indica que a diferença é ESTATISTICAMENTE SIGNIFICANTE.\n")
+
+    for i in range(1, len(all_dfs)):
+        other_system_name = all_dfs[i]['name']
+        other_scores_df = all_dfs[i]['df'][['qid', metric]]
+        
+        # Garante que os scores estão alinhados pelas queries
+        merged_scores = pd.merge(best_scores_df, other_scores_df, on='qid', suffixes=('_best', '_other'))
+        
+        if len(merged_scores) < 2:
+            print(f"Comparação: {best_system_name} vs. {other_system_name}")
+            print("  Não há queries suficientes em comum para o teste.")
+            print("-" * 20)
+            continue
+
+        # Calcula a diferença entre os scores para ver se todos são zero
+        diffs = merged_scores[f'{metric}_best'] - merged_scores[f'{metric}_other']
+        if (diffs == 0).all():
+            print(f"Comparação: {best_system_name} vs. {other_system_name}")
+            print("  Os scores são idênticos, logo não há diferença estatística.")
+            print("-" * 20)
+            continue
+
+        stat, p_value = wilcoxon(merged_scores[f'{metric}_best'], merged_scores[f'{metric}_other'])
+        
+        print(f"Comparação: {best_system_name} vs. {other_system_name}")
+        print(f"  p-valor: {p_value:.4f}")
+        if p_value < 0.05:
+            print("  Resultado: A diferença é ESTATISTICAMENTE SIGNIFICANTE.")
+        else:
+            print("  Resultado: A diferença NÃO é estatisticamente significante.")
+        print("-" * 20)
+
 
 def evaluate_runs(qrels, runs_paths, k):
     summary = []
+    all_dfs = []
+
     for run_path in runs_paths:
         run = read_run(run_path)
         
@@ -140,11 +195,18 @@ def evaluate_runs(qrels, runs_paths, k):
         if df.empty:
             print(f"[aviso] sem queries em comum entre qrels e {run_path.name}")
             continue
+        
+        all_dfs.append({'name': run_path.stem, 'df': df})
+
         print(f"\n=== {run_path.name} ===")
-        print(df.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
-        means = df.mean(numeric_only=True)
+        # Seleciona apenas as colunas de métricas para exibição, excluindo qid
+        metric_cols = [col for col in df.columns if col != 'qid']
+        print(df[['qid'] + metric_cols].to_string(index=False, float_format=lambda x: f"{x:.4f}"))
+        
+        means = df[metric_cols].mean()
         print("\nMedias:")
         print(means.to_string(float_format=lambda x: f"{x:.4f}"))
+        
         summary.append({
             "system": run_path.stem,
             **{k: float(v) for k, v in means.items()},
@@ -152,8 +214,11 @@ def evaluate_runs(qrels, runs_paths, k):
 
     if summary:
         print("\n=== Resumo (medias) ===")
-        sm = pd.DataFrame(summary)
+        sm = pd.DataFrame(summary).sort_values(by=f"nDCG@{k}", ascending=False)
         print(sm.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
+        
+        # Executa o teste estatístico
+        run_statistical_test(all_dfs, metric=f'nDCG@{k}')
 
 
 def main():
